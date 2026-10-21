@@ -17,7 +17,7 @@ devcontainer 上で [pi-durable](https://github.com/earendil-works/pi/tree/main/
 | # | マイルストーン | 達成目標 | 完了条件 | 調査・決定事項 | 状態 |
 |---|---|---|---|---|---|
 | M0 | リポジトリの土台 | テンプレート初期化 | プレースホルダが埋まり `nix flake check` が通る | — | 完了 |
-| M1 | 隔離実行環境 | devcontainer（Nix 入り）で Node 22.19+ が動く | コンテナ内で flake の devShell が有効になり `node -v` が通る。`/workspace` がマウントされている | API キーの渡し方、外部ネットワークの許可範囲 | 未着手 |
+| M1 | 隔離実行環境 | devcontainer（Nix 入り）で Node 22.19+ が動く | コンテナ内で flake の devShell が有効になり `node -v` が通る。`/workspace` がマウントされている | API キーの渡し方、外部ネットワークの許可範囲（M2 へ持ち越し） | 完了 |
 | M2 | pi durable の動作 | 公式 example を動かす | faux provider で `14-chat`、実モデルで `16-real-model` が応答する | プロバイダ（Anthropic / OpenAI）、モデル指定 | 未着手 |
 | M3 | SQLite 永続化 | `openNodeSqliteStorage` で保存・再開する | sqlite3 で JSON レコードを確認できる。実行途中の kill から `resume()` で再開できる。会話を JSONL で書き出せる | DB ファイルの配置（コンテナ内 / ボリューム）、WAL の扱い | 未着手 |
 | M4 | 単体コーディングエージェント | `CodingTools` + `NodeExecutionEnv` | コンテナ内のファイルを編集できる。`beforeTool` で危険なコマンドを止められる | ガードの方針 | 未着手 |
@@ -27,6 +27,17 @@ devcontainer 上で [pi-durable](https://github.com/earendil-works/pi/tree/main/
 | M8 | 堅牢性 | 長時間運用・障害への耐性 | サブエージェント作業中の再起動から再開できる。compaction と `restartLimit` が働き、usage を確認できる | compaction の閾値、コスト上限 | 未着手 |
 | M9 | 観測 | 動作状況の可視化 | `taskGraph` / `watchEvents` で状況を表示できる。SQLite の分析クエリがある | TUI / Web UI の要否 | 未着手 |
 | M10 | まとめ | 判断と使い方の記録 | ADR と README の使用手順がある | — | 未着手 |
+
+## 記録
+
+### M1 隔離実行環境
+
+- `.devcontainer/devcontainer.json`: debian ベースイメージ + Nix feature。ツールは `flake.nix` の devShell に一本化し、コンテナ内は direnv で有効にする
+- 確認結果（`direnv exec . ...`）: Node v22.23.3 / sqlite 3.53.3 / just 1.58.0
+- ワークスペースはホストと同じ絶対パスにマウントする。git worktree の `.git` ファイルがホストの絶対パスを指し、`/workspace` だと flake を評価できないため
+- git worktree から起動する場合は、共通の `.git` も同じパスでマウントする:
+  `devcontainer up --workspace-folder . --mount "type=bind,source=$(cd "$(git rev-parse --git-common-dir)" && pwd),target=<同じパス>"`
+- 既知の問題: devShell の shellHook によるスキル同期（`.agents/skills`）がコンテナ内で `Permission denied` になる。Nix store から読み取り専用のディレクトリがコピーされ、その中に書き込めないため。ツールの動作には影響しない。コンテナ内の pi エージェントは `.agents/skills` を使わないので後回し
 
 ## 進め方
 
