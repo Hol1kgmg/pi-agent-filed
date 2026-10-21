@@ -25,7 +25,7 @@ durable の API はストレージ非依存なので、ローカル版（M2〜M7
 |---|---|---|---|---|---|
 | M0 | リポジトリの土台 | テンプレート初期化 | プレースホルダが埋まり `nix flake check` が通る | — | 完了 |
 | M1 | 隔離実行環境 | devcontainer（Nix 入り）で Node 22.19+ が動く | コンテナ内で flake の devShell が有効になり `node -v` が通る。`/workspace` がマウントされている | API キーの渡し方、外部ネットワークの許可範囲（M2 へ持ち越し） | 完了 |
-| M2 | pi durable の動作 | 公式 example を動かす | faux provider で `14-chat`、実モデルで `16-real-model` が応答する | プロバイダ（Anthropic / OpenAI）、モデル指定 | 未着手 |
+| M2 | pi durable の動作 | 公式 example を動かす | faux provider で `14-chat`、実モデルで `16-real-model` が応答する | プロバイダ（Anthropic / OpenAI）、モデル指定。決定: 試験運用は ChatGPT Plus の定額（pi-ai `openai` を Sign in with ChatGPT で使う。PO / design: gpt-6.1-sol、spec / impl: gpt-6-luna）。詳細は [provider-comparison.md](provider-comparison.md) | 未着手 |
 | M3 | SQLite 永続化 | `openNodeSqliteStorage` で保存・再開する | sqlite3 で JSON レコードを確認できる。実行途中の kill から `resume()` で再開できる。会話を JSONL で書き出せる | DB ファイルの配置（コンテナ内 / ボリューム）、WAL の扱い | 未着手 |
 | M4 | 単体コーディングエージェント | `CodingTools` + `NodeExecutionEnv` | コンテナ内のファイルを編集できる。`beforeTool` で危険なコマンドを止められる | ガードの方針 | 未着手 |
 | M5 | PO エージェント | 開発者と対話する入口（readline REPL + PO 用 instructions） | 対話でき、実行中の steer / follow-up を受け付ける | PO の責務、承認の手順 | 未着手 |
