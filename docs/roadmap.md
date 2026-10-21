@@ -12,7 +12,14 @@ devcontainer 上で [pi-durable](https://github.com/earendil-works/pi/tree/main/
 
 ## マイルストーン
 
-依存: M1 → M2 → M3 → M4 → M5 → M6 → M7。M8 / M9 は M6 以降に並行可。
+依存: M1 → M2 → M3 → M4 → M5 → M6 → M7 → M11。M8 / M9 は M6 以降に並行可。M10 は最後。
+
+durable の API はストレージ非依存なので、ローカル版（M2〜M7）で書いた host を M11 でほぼそのまま Cloudflare に載せる。
+
+組み合わせる SDK の判断:
+
+- Cloudflare Agents SDK（npm `agents`）: 採用（M11）。durable が DO SQLite ストレージと `onWake` による alarm 再開を公式に持つため
+- pi agent（`@earendil-works/pi-agent-core`）: 不採用。durable は agent-core に依存せず生成ループとツール実行を自前で永続化しており、役割が重なる
 
 | # | マイルストーン | 達成目標 | 完了条件 | 調査・決定事項 | 状態 |
 |---|---|---|---|---|---|
@@ -26,6 +33,7 @@ devcontainer 上で [pi-durable](https://github.com/earendil-works/pi/tree/main/
 | M7 | エージェント間連携 | 仕様 → 設計 → 実装 → レビューを PO の承認付きで回す | 1 つのお題が最後まで通る | 成果物の受け渡し（workspace のファイル / `defineDoc`） | 未着手 |
 | M8 | 堅牢性 | 長時間運用・障害への耐性 | サブエージェント作業中の再起動から再開できる。compaction と `restartLimit` が働き、usage を確認できる | compaction の閾値、コスト上限 | 未着手 |
 | M9 | 観測 | 動作状況の可視化 | `taskGraph` / `watchEvents` で状況を表示できる。SQLite の分析クエリがある | TUI / Web UI の要否 | 未着手 |
+| M11 | Cloudflare 版 | Cloudflare Agents SDK の Agent（Durable Object）内で Harness を開き、ストレージを DO SQLite（`openDurableObjectSqliteStorage`）にする | `wrangler dev` で PO と対話でき、alarm（`onWake`）で再開できる。コード実行は devcontainer 内の pi-env デーモン（`RemoteExecutionEnv`）に委譲する | 実行環境（pi-env / Cloudflare Containers / Sandbox）、UI 接続 | 未着手 |
 | M10 | まとめ | 判断と使い方の記録 | ADR と README の使用手順がある | — | 未着手 |
 
 ## 記録
