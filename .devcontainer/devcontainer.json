@@ -1,0 +1,13 @@
+{
+  "name": "pi-durable-dev-env",
+  "image": "mcr.microsoft.com/devcontainers/base:debian",
+  "features": {
+    "ghcr.io/devcontainers/features/nix:1": {
+      "extraNixConfig": "experimental-features = nix-command flakes"
+    }
+  },
+  "// workspaceMount": "git worktree の .git がホストの絶対パスを指すため、ホストと同じパスにマウントする",
+  "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+  "workspaceFolder": "${localWorkspaceFolder}",
+  "postCreateCommand": "nix profile install nixpkgs#direnv nixpkgs#nix-direnv && echo 'source $HOME/.nix-profile/share/nix-direnv/direnvrc' > $HOME/.direnvrc && echo 'eval \"$(direnv hook bash)\"' >> $HOME/.bashrc && direnv allow"
+}

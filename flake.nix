@@ -99,6 +99,8 @@
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.just
+            pkgs.nodejs_22
+            pkgs.sqlite
             pkgs.gitleaks
             pkgs.lefthook
             pkgs.gh

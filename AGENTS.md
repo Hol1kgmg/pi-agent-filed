@@ -1,20 +1,8 @@
-# First Run
-If README.md still contains `{app name}`, this repository was just generated from the template.
-Run the `init-from-template` skill before any other work.
-
 # Project Overview
-{Describe the project (e.g. Dotfiles management project for macOS using Nix and Home-Manager)}
+pi durable agent をホストで動かしてツールの実行だけを devcontainer に隔離し、コンテキストを SQLite（JSONL）で永続化、開発者は PO 役エージェントと対話し、内部のサブエージェント群が仕様・設計・実装を行う開発環境の検証・調査リポジトリ。
 
 # Setup and Basic Usage
 Setup instructions and basic usage are documented in [README.md](./README.md).
-
-# Directory Structure
-{Remove this whole section if a directory structure document is not needed}
-See [{DIRECTORY_STRUCTURE_FILE}.md](./{DIRECTORY_STRUCTURE_FILE}.md) for details.
-
-# Troubleshooting
-{Remove this whole section if a troubleshooting document is not needed}
-- Setup and daily usage issues: See [{TROUBLESHOOTING_FILE}.md](./{TROUBLESHOOTING_FILE}.md)
 
 # Work Rules
 1. Propose implementation plan
