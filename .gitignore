@@ -1,0 +1,11 @@
+.direnv/
+.agents/skills/
+.agents/rules/
+.claude/settings.local.json
+
+.env
+.env.local
+.env*.local
+
+.DS_Store
+*.log
