@@ -1,5 +1,5 @@
-# {app name}
-{アプリの概要}
+# pi-durable-dev-env
+devcontainer/VM 上で pi durable agent を動かし、コンテキストを SQLite（JSONL）で永続化、開発者は PO 役エージェントと対話し、内部のサブエージェント群が仕様・設計・実装を行う開発環境の検証・調査リポジトリ。
 
 ## 前提条件
 

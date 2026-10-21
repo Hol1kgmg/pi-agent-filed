@@ -5,6 +5,7 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 0
 
   # flake.lock の全 input が対象。skill / rules の取得元も flake = false な input なので
   # ここに含まれ、input ごとに PR が立つ。レビューは dependabot-review スキルで行う
@@ -12,3 +13,4 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
