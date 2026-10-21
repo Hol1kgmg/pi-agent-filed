@@ -132,15 +132,15 @@ durable の compaction への影響:
 |---|---|---|---|
 | Anthropic | ✓ `ANTHROPIC_API_KEY` | 最初の Start tier でも各モデル 1,000 RPM / 2M ITPM / 400K OTPM。キャッシュ読みは ITPM に数えない | ✓ 組織とワークスペースごとに月額上限を設定できる。tier ごとの上限（Start $500/月） |
 | OpenAI | ✓ `OPENAI_API_KEY` | tier 制（今回未確認） | プロジェクト単位の予算設定（今回未確認） |
-| OpenAI（codex） | ✗ OAuth のみ。devcontainer では対話ログインが必要 | サブスクの枠 | 定額 |
+| OpenAI（codex） | ✗ OAuth のみ。ホストのブラウザで対話ログインが必要 | サブスクの枠 | 定額 |
 | Google | ✓ `GEMINI_API_KEY` | tier 制（今回未確認）。無料枠のデータは製品改善に使われうる | 未確認 |
-| Vertex / Bedrock | △ ADC / AWS 資格情報。コンテナへの受け渡しが増える | クラウドのクォータ | クラウドの予算アラート |
+| Vertex / Bedrock | △ ADC / AWS 資格情報 | クラウドのクォータ | クラウドの予算アラート |
 | OpenRouter | ✓ `OPENROUTER_API_KEY` | 上流次第 | プリペイドのクレジット |
 | Cloudflare | ✓ 3 つの env | アカウント単位 | Workers Paid / AI Gateway のプリペイドクレジット |
 | DeepSeek | ✓ `DEEPSEEK_API_KEY` | 同時実行数で制限（Flash 2,500 / Pro 500） | プリペイド残高。データは中国の事業者が処理する |
 
 - サブスクリプションの OAuth（`anthropic` の Claude Pro/Max、`openai-codex`）は自作の常駐エージェント基盤から使う前提では選ばない。API キーで従量課金にする
-- `.env` は `.gitignore` 済み。devcontainer には `--env-file` か `remoteEnv` で渡す（キーをファイルにコミットしない）
+- `.env` は `.gitignore` 済み。ホストの host が読む。コンテナ（ツールの実行環境）には渡さない（キーをファイルにコミットしない）
 
 ## 6. M11（Cloudflare 版）との相性
 
@@ -184,7 +184,7 @@ ChatGPT プランの条件:
 - プレビューなので使えないパラメータがある（`prompt_cache_retention`、`max_output_tokens`、`temperature` など）。pi-ai は OAuth のとき `prompt_cache_retention` などを省いて送る。仕様は変わりうる
 - API 呼び出し 1 回が何メッセージ分になるかは公式資料に書かれていない
 - `openai-codex`（`chatgpt.com/backend-api` を使う旧経路）は使わず、`openai` の Sign in with ChatGPT を使う
-- devcontainer での注意: OAuth のコールバックは `127.0.0.1:1455` で受ける（`PI_OAUTH_CALLBACK_HOST` で変更可）。ログイン時はポート 1455 をホストへ転送する。取得したトークンはコミットしない
+- ログインは host と同じくホストで行う。OAuth のコールバックは `127.0.0.1:1455` で受ける（`PI_OAUTH_CALLBACK_HOST` で変更可）ので、ポート転送は要らない。取得したトークンはコンテナに渡さず、コミットもしない
 
 ## 推薦の理由（API 従量課金の場合）
 
