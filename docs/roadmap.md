@@ -31,7 +31,7 @@ durable の API はストレージ非依存なので、ローカル版（M2〜M7
 |---|---|---|---|---|---|
 | M0 | リポジトリの土台 | テンプレート初期化 | プレースホルダが埋まり `nix flake check` が通る | — | 完了 |
 | M1 | 隔離実行環境 | devcontainer（Nix 入り）で Node 22.19+ が動く | コンテナ内で flake の devShell が有効になり `node -v` が通る。`/workspace` がマウントされている | API キーの渡し方（host がホストで動くので不要）、外部ネットワークの許可範囲（M4 へ持ち越し） | 完了 |
-| M2 | pi durable の動作 | 公式 example をホストで動かす | faux provider で `14-chat`、実モデルで `16-real-model` が応答する | プロバイダ（Anthropic / OpenAI）、モデル指定。決定: 試験運用は ChatGPT Plus の定額（pi-ai `openai` を Sign in with ChatGPT で使う。PO / design: gpt-6.1-sol、spec / impl: gpt-6-luna）。詳細は [provider-comparison.md](provider-comparison.md) | 未着手 |
+| M2 | pi durable の動作 | 公式 example をホストで動かす | faux provider で `14-chat`、実モデルで `16-real-model` が応答する | プロバイダ（Anthropic / OpenAI）、モデル指定。決定: 試験運用は ChatGPT Plus の定額（pi-ai `openai` を Sign in with ChatGPT で使う。PO / design: gpt-6.1-sol、spec / impl: gpt-6-luna）。詳細は [provider-comparison.md](provider-comparison.md) | 完了 |
 | M3 | SQLite 永続化 | ホストで `openNodeSqliteStorage` を使い保存・再開する | sqlite3 で JSON レコードを確認できる。実行途中の kill から `resume()` で再開できる。会話を JSONL で書き出せる | DB ファイルのホスト上の配置（リポジトリ内 / 外）、WAL の扱い | 未着手 |
 | M4 | 単体コーディングエージェント | `CodingTools` + `RemoteExecutionEnv`（コンテナ内の pi-env デーモン） | ホストの host からコンテナ内のファイルを編集できる。`beforeTool` で危険なコマンドを止められる | pi-env の起動方法、ホストとコンテナ間の通信、コンテナの外部ネットワークの許可範囲、ガードの方針 | 未着手 |
 | M5 | PO エージェント | 開発者と対話する入口（readline REPL + PO 用 instructions） | 対話でき、実行中の steer / follow-up を受け付ける | PO の責務、承認の手順 | 未着手 |
@@ -53,6 +53,15 @@ durable の API はストレージ非依存なので、ローカル版（M2〜M7
   `devcontainer up --workspace-folder . --mount "type=bind,source=$(cd "$(git rev-parse --git-common-dir)" && pwd),target=<同じパス>"`
 - 構成の変更: 当初は host もコンテナ内で動かす予定だったが、隔離が要るのはツールの実行だけなので、host・DB・認証情報をホストに置き実行だけをコンテナに委譲する構成にした（理由は「構成」を参照）。コンテナは実行サンドボックスとして使う
 - 既知の問題: devShell の shellHook によるスキル同期（`.agents/skills`）がコンテナ内で `Permission denied` になる。Nix store から読み取り専用のディレクトリがコピーされ、その中に書き込めないため。ツールの動作には影響しない。コンテナ内の pi エージェントは `.agents/skills` を使わないので後回し
+
+### M2 pi durable の動作
+
+- `host/`: ホストで動かす host の npm パッケージ。`@earendil-works/pi-durable` / `pi-ai` / `chord` を 1.3.0 に固定し、Node 22 の `--experimental-strip-types` で TS を直接実行する（ビルドなし）
+- 公式 example（tag `v1.3.0`）を `host/examples/` に移植した。`../../src/index.ts` の import をパッケージ名に変えるだけで動く
+- 確認結果: `just chat`（faux）は `Paris.` を返す。`just real-model`（`openai` / `gpt-6.1-sol`、Sign in with ChatGPT）はストリーミングで応答する
+- 認証: pi-ai が標準で持つ資格情報ストアは `InMemoryCredentialStore` だけなので、ファイルに保存する `CredentialStore` を `host/auth.ts` に実装した。保存先はリポジトリの外（`~/.config/pi-agent-filed/`、ディレクトリ 700 / ファイル 600、`PI_AGENT_FILED_HOME` で変更可）。ログインは `just login`
+- Sign in with ChatGPT はインストールごとに固定の UUID（device ID）を要求する。`LoginOptions.getDeviceId` で渡し、同じディレクトリの `device-id` に保存する
+- トークンの更新（refresh）は `Models.getAuth()` がストアの `modify` 内で行う。ストアの排他はプロセス内だけ（durable も 1 ストレージ 1 プロセスなので足りる）
 
 ## 進め方
 
