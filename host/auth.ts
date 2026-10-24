@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { Credential, CredentialStore } from "@earendil-works/pi-ai";
 
 // The agent's shell runs in the devcontainer and must not be able to read tokens, so keep them outside the repo.
-const dir = process.env.PI_AGENT_FILED_HOME ?? join(homedir(), ".config", "pi-agent-filed");
+export const dir = process.env.PI_AGENT_FILED_HOME ?? join(homedir(), ".config", "pi-agent-filed");
 const credentialsPath = join(dir, "credentials.json");
 const deviceIdPath = join(dir, "device-id");
 
