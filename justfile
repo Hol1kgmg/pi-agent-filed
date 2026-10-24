@@ -67,3 +67,17 @@ chat:
 # Stream an answer from a real model
 real-model:
     cd host && node --experimental-strip-types examples/16-real-model.ts
+
+db := env("PI_AGENT_FILED_HOME", home_directory() / ".config/pi-agent-filed") / "session.sqlite"
+
+# Ask the persistent root conversation (no question: finish interrupted inputs)
+ask *QUESTION:
+    @cd host && node --disable-warning=ExperimentalWarning --experimental-strip-types ask.ts {{quote(QUESTION)}}
+
+# Count stored records per table
+db:
+    @sqlite3 -readonly {{quote(db)}} "SELECT 'conversations', count(*) FROM conversations UNION ALL SELECT 'entries', count(*) FROM entries UNION ALL SELECT 'tasks', count(*) FROM tasks UNION ALL SELECT 'submissions', count(*) FROM submissions UNION ALL SELECT 'documents', count(*) FROM documents"
+
+# Print the root conversation's entries as JSONL
+export:
+    @sqlite3 -readonly {{quote(db)}} "SELECT record FROM entries WHERE conversation_id = 1 ORDER BY id"

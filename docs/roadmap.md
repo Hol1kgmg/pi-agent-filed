@@ -32,7 +32,7 @@ durable の API はストレージ非依存なので、ローカル版（M2〜M7
 | M0 | リポジトリの土台 | テンプレート初期化 | プレースホルダが埋まり `nix flake check` が通る | — | 完了 |
 | M1 | 隔離実行環境 | devcontainer（Nix 入り）で Node 22.19+ が動く | コンテナ内で flake の devShell が有効になり `node -v` が通る。`/workspace` がマウントされている | API キーの渡し方（host がホストで動くので不要）、外部ネットワークの許可範囲（M4 へ持ち越し） | 完了 |
 | M2 | pi durable の動作 | 公式 example をホストで動かす | faux provider で `14-chat`、実モデルで `16-real-model` が応答する | プロバイダ（Anthropic / OpenAI）、モデル指定。決定: 試験運用は ChatGPT Plus の定額（pi-ai `openai` を Sign in with ChatGPT で使う。PO / design: gpt-6.1-sol、spec / impl: gpt-6-luna）。詳細は [provider-comparison.md](provider-comparison.md) | 完了 |
-| M3 | SQLite 永続化 | ホストで `openNodeSqliteStorage` を使い保存・再開する | sqlite3 で JSON レコードを確認できる。実行途中の kill から `resume()` で再開できる。会話を JSONL で書き出せる | DB ファイルのホスト上の配置（リポジトリ内 / 外）、WAL の扱い | 未着手 |
+| M3 | SQLite 永続化 | ホストで `openNodeSqliteStorage` を使い保存・再開する | sqlite3 で JSON レコードを確認できる。実行途中の kill から `resume()` で再開できる。会話を JSONL で書き出せる | DB ファイルのホスト上の配置（リポジトリ内 / 外）、WAL の扱い。決定: リポジトリ外（`~/.config/pi-agent-filed/session.sqlite`）、WAL は durable の既定のまま | 完了 |
 | M4 | 単体コーディングエージェント | `CodingTools` + `RemoteExecutionEnv`（コンテナ内の pi-env デーモン） | ホストの host からコンテナ内のファイルを編集できる。`beforeTool` で危険なコマンドを止められる | pi-env の起動方法、ホストとコンテナ間の通信、コンテナの外部ネットワークの許可範囲、ガードの方針 | 未着手 |
 | M5 | PO エージェント | 開発者と対話する入口（readline REPL + PO 用 instructions） | 対話でき、実行中の steer / follow-up を受け付ける | PO の責務、承認の手順 | 未着手 |
 | M6 | サブエージェント | spec / design / impl の常駐サブエージェント | PO から spawn・指示・停止・一覧ができ、結果が PO に報告される | 役割ごとのモデル・ツール、サブエージェントの再帰を禁止するか | 未着手 |
@@ -62,6 +62,17 @@ durable の API はストレージ非依存なので、ローカル版（M2〜M7
 - 認証: pi-ai が標準で持つ資格情報ストアは `InMemoryCredentialStore` だけなので、ファイルに保存する `CredentialStore` を `host/auth.ts` に実装した。保存先はリポジトリの外（`~/.config/pi-agent-filed/`、ディレクトリ 700 / ファイル 600、`PI_AGENT_FILED_HOME` で変更可）。ログインは `just login`
 - Sign in with ChatGPT はインストールごとに固定の UUID（device ID）を要求する。`LoginOptions.getDeviceId` で渡し、同じディレクトリの `device-id` に保存する
 - トークンの更新（refresh）は `Models.getAuth()` がストアの `modify` 内で行う。ストアの排他はプロセス内だけ（durable も 1 ストレージ 1 プロセスなので足りる）
+
+### M3 SQLite 永続化
+
+- `host/ask.ts`（`just ask "質問"`）: root 会話に 1 問投げてストリーミングで表示する。会話は SQLite に残るので、次の実行は前の会話の続きになる。起動時に未完了の submission があれば、新しい質問の前にそれを完了させる（引数なしの `just ask` は再開だけを行う）
+- DB の配置: 資格情報と同じリポジトリ外のディレクトリ（`PI_AGENT_FILED_HOME`）に置く。M4 からリポジトリはコンテナにマウントされるので、リポジトリ内に置くとエージェントのシェルが会話履歴を読み書きできてしまう
+- WAL: `openNodeSqliteStorage` が `journal_mode = WAL` / `synchronous = NORMAL` を自分で設定する。実行中は `-wal` / `-shm` ができ、`close()` で checkpoint されて消える。kill されると残るが、次に開いたときに取り込まれる
+- 確認結果: `just db` でテーブルごとの件数、`sqlite3` で `record` 列の JSON（`{"kind":"pi.user","model":[...],"conversationId":1,...}`）を確認できた。`just export` の出力は 1 行 1 件の JSON として全行パースできた
+- kill からの再開: ストリーミング中に `kill -9` すると、submission は `placed`、`pi.generation` タスクは `running` のまま残る。再実行すると `harness.inspect()` に出てくるので、`harness.submission(id)` を `wait()` すると完了する
+  - 生成は途中からではなく最初からやり直しになる（別の回答になる）。中断した部分は `stopReason: "aborted"` の `pi.assistant` entry として履歴に残るが、モデルに渡す context には入らない（`context()` の contributions が 0 件）
+  - kill のたびに、中断した分の生成で使ったプランの枠は無駄になる。M8 で長い生成を扱うときの前提にする
+- `just export` は root 会話（ID 1 は root 用に予約されている）の全 entry を出す。fork や中断した entry も含むので、モデルが見た context そのものではない
 
 ## 進め方
 
