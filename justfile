@@ -51,3 +51,19 @@ scan-staged:
 # Serve markdown at http://localhost:8080
 docs *ARGS:
     markserv . -p 8080 -a 0.0.0.0 --browser=false {{ARGS}}
+
+# Install host dependencies
+host-install:
+    cd host && npm ci
+
+# Sign in with ChatGPT for the openai provider
+login:
+    cd host && node --experimental-strip-types login.ts
+
+# Run the faux-provider chat example
+chat:
+    cd host && node --experimental-strip-types examples/14-chat.ts
+
+# Stream an answer from a real model
+real-model:
+    cd host && node --experimental-strip-types examples/16-real-model.ts
