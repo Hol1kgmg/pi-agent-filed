@@ -41,7 +41,12 @@ const root = await harness.root(context, { agent: { model: { provider: "openai",
 
 let printed = "";
 const printText = (text: string): void => {
-	if (text.length <= printed.length || !text.startsWith(printed)) return;
+	// A killed run's leftover partial or a retried attempt does not extend what was printed; start over instead of dropping the new answer.
+	if (!text.startsWith(printed)) {
+		if (printed !== "") process.stdout.write("\n--- regenerated ---\n");
+		printed = "";
+	}
+	if (text.length <= printed.length) return;
 	process.stdout.write(text.slice(printed.length));
 	printed = text;
 };
@@ -66,11 +71,14 @@ const answer = async (submission: Submission): Promise<void> => {
 	}
 };
 
-for (const record of (await harness.inspect(context)).submissions) {
-	console.log(`resuming submission ${record.id}`);
-	await answer((await harness.submission(record.id, context))!);
+try {
+	for (const record of (await harness.inspect(context)).submissions) {
+		if (record.conversationId !== root.id || record.type !== "input") continue;
+		console.log(`resuming submission ${record.id}`);
+		await answer((await harness.submission(record.id, context))!);
+	}
+	if (question !== "") await answer(await root.submit({ type: "input", content: question }, context));
+} finally {
+	await liveWatch.stop();
+	await harness.close(context);
 }
-if (question !== "") await answer(await root.submit({ type: "input", content: question }, context));
-
-await liveWatch.stop();
-await harness.close(context);
