@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+# just scan walks the working tree; credentials and cloned work repos there are never committed here.
+[[allowlists]]
+paths = ['''(^|/)\.data/''', '''(^|/)workspace/''']

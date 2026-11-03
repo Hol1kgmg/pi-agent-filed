@@ -1,6 +1,14 @@
 # Project Overview
 pi durable agent をホストで動かしてツールの実行だけを devcontainer に隔離し、コンテキストを SQLite（JSONL）で永続化、開発者は PO 役エージェントと対話し、内部のサブエージェント群が仕様・設計・実装を行う開発環境の検証・調査リポジトリ。
 
+# Implementation Principles
+
+このリポジトリの目的は、要件を満たすエージェント開発環境の実現可能性を検証することである。実装では次の基準に従う。
+
+- 要件を満たす範囲で、シンプルで最小限の構成を選ぶ。
+- 検証に必要のない機能追加、汎用化、抽象化は行わない。
+- 将来の拡張を見越した仕組みは、検証に必要になった時点で検討する。
+
 # Setup and Basic Usage
 Setup instructions and basic usage are documented in [README.md](./README.md).
 

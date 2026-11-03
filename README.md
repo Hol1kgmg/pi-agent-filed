@@ -1,6 +1,12 @@
 # pi-durable-dev-env
 pi durable agent をホストで動かしてツールの実行だけを devcontainer に隔離し、コンテキストを SQLite（JSONL）で永続化、開発者は PO 役エージェントと対話し、内部のサブエージェント群が仕様・設計・実装を行う開発環境の検証・調査リポジトリ。
 
+## 検証の方針
+
+このリポジトリの目的は、要件を満たすエージェント開発環境の実現可能性を検証することである。要件を満たす範囲で、シンプルで最小限の構成を優先する。検証に必要のない機能追加、汎用化、抽象化は行わない。
+
+構成の全体像は [docs/architecture.md](docs/architecture.md)、要件は [docs/requirements.md](docs/requirements.md)、進め方は [docs/roadmap.md](docs/roadmap.md) にある。
+
 ## 前提条件
 
 [Nix](https://nixos.org/)（Flakes 有効）と [direnv](https://direnv.net/) がインストールされ、シェルに統合されていること。

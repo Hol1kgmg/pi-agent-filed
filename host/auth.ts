@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Credential, CredentialStore } from "@earendil-works/pi-ai";
 
-// The agent's shell runs in the devcontainer and must not be able to read tokens, so keep them outside the repo.
-const dir = process.env.PI_AGENT_FILED_HOME ?? join(homedir(), ".config", "pi-agent-filed");
+// The container mounts only worktrees under workspace/, so tokens here stay out of the agent's shell (ADR 0001).
+export const dir = process.env.PI_AGENT_FILED_HOME ?? join(import.meta.dirname, "..", ".data");
 const credentialsPath = join(dir, "credentials.json");
 const deviceIdPath = join(dir, "device-id");
 
