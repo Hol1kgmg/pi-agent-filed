@@ -1,6 +1,3 @@
-// Ask the root conversation one question; the transcript lives in SQLite, so later runs continue it.
-// Run from host/: node --experimental-strip-types ask.ts [question]
-// Without a question, it only finishes inputs an earlier run left unanswered.
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";

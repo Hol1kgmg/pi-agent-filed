@@ -68,7 +68,9 @@ chat:
 real-model:
     cd host && node --experimental-strip-types examples/16-real-model.ts
 
-db := env("PI_AGENT_FILED_HOME", home_directory() / ".config/pi-agent-filed") / "session.sqlite"
+# Recipes that cd into host/ would otherwise resolve a relative path to a different directory than db/export.
+export PI_AGENT_FILED_HOME := clean(join(invocation_directory(), env("PI_AGENT_FILED_HOME", justfile_directory() / ".data")))
+db := PI_AGENT_FILED_HOME / "session.sqlite"
 
 # Ask the persistent root conversation (no question: finish interrupted inputs)
 ask *QUESTION:

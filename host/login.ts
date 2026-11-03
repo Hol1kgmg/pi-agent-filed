@@ -1,5 +1,3 @@
-// Sign in with ChatGPT and store the credential for the openai provider.
-// Run from host/: node --experimental-strip-types login.ts
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { createModels } from "@earendil-works/pi-ai/models";
