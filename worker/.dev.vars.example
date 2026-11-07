@@ -1,0 +1,12 @@
+# Workers AI を呼ぶ API トークン（権限は Workers AI の Read だけ）と、そのアカウント ID
+CLOUDFLARE_API_KEY=
+CLOUDFLARE_ACCOUNT_ID=
+# 32 文字以上。openssl rand -hex 32 などで作る
+WEBHOOK_TOKEN=
+# 任意。GitHub App（Contents と Pull requests の Read and write だけ）を作業リポジトリにだけインストールする
+GITHUB_APP_ID=
+# openssl pkcs8 -topk8 -nocrypt -in app.private-key.pem で PKCS#8 にした鍵。改行を含めたまま "..." で囲む
+GITHUB_APP_PRIVATE_KEY=
+GITHUB_INSTALLATION_ID=
+# owner/repo
+GITHUB_REPOSITORY=

@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pi-agent-filed",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "image": "./sandbox.Dockerfile",
+      "max_instances": 5,
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "SESSIONS", "class_name": "Session" },
+      { "name": "SANDBOX", "class_name": "Sandbox" },
+    ],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Session", "Sandbox"] }],
+}
