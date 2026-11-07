@@ -17,6 +17,11 @@ ADR は決定そのものと、その背景・帰結を記録する。コード�
 |---|---|---|
 | 0001 | [テンプレート元の変更を手動のマージコミットで取り込む](0001-sync-template-via-merge-commit.md) | accepted |
 | 0002 | [書き込み権限を GitHub App の短命トークンで得る](0002-use-github-app-for-write-access.md) | superseded by 0003 |
-| 0003 | [skill / rules の取得元を flake input にして Dependabot で更新する](0003-update-skill-sources-via-dependabot.md) | accepted |
+| 0003 | [skill / rules の取得元を flake input にして Dependabot で更新する](0003-update-skill-sources-via-dependabot.md) | accepted (一部 0004 で置き換え) |
+| 0004 | [skill / rules 以外の Dependabot PR を auto-merge する](0004-auto-merge-non-skill-dependabot-prs.md) | accepted |
+| 0005 | [テンプレート管理と派生先管理の宣言を別ファイル・別区画に分ける](0005-separate-template-and-project-files.md) | accepted |
+| 0006 | [派生リポジトリにテンプレート取り込みの draft PR を週次で用意し、重複する Dependabot PR を閉じる](0006-automate-template-sync-pr.md) | accepted |
+| 0007 | [skill / rules を Nix から APM に移す](0007-manage-skills-and-rules-with-apm.md) | superseded by 0008 |
+| 0008 | [skill / rules の取得元を flake input に戻す](0008-revert-skill-sources-to-flake-inputs.md) | accepted |
 
 lockfile 自動更新のセットアップ手順は [docs/lockfile-automation.md](../../docs/lockfile-automation.md) にある。

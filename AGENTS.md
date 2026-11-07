@@ -39,5 +39,5 @@ Code comment rules:
 - `curl` → `WebFetch` tool
 
 # Language Settings
-- Responses: `.claude/settings.json` - `language`
+- Responses: Japanese
 - Thinking: English (for token reduction)

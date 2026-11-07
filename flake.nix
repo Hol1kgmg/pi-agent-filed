@@ -21,45 +21,40 @@
     cognitive-rhythm-writing = { url = "git+https://gist.github.com/k16shikano/eb2929f13ed19c97188393d297be8432.git"; flake = false; };
     japanese-tech-writing = { url = "git+https://gist.github.com/k16shikano/fd287c3133457c4fd8f5601d34aa817d.git"; flake = false; };
     hol1kgmg-rules = { url = "github:Hol1kgmg/rules"; flake = false; };
+
+    # --- project inputs: 派生先が管理。adr/from-template/0005 ---
+
   };
 
-  outputs = inputs@{ nixpkgs, flake-utils, agent-skills, nur-packages, agent-rules, nix-claude-code, ... }:
+  outputs = inputs@{ self, nixpkgs, flake-utils, agent-skills, nur-packages, agent-rules, nix-claude-code, ... }:
     let
       agentLib = agent-skills.lib.agent-skills;
       rulesLib = agent-rules.lib.agent-rules;
+      lib = nixpkgs.lib;
 
-      # 有効にする ID は ./skills.nix
-      sources = {
-        anthropic = { path = inputs.anthropic-skills.outPath; subdir = "skills"; };
-        vercel = { path = inputs.vercel-ai.outPath; subdir = "skills"; };
-        web-quality = { path = inputs.web-quality-skills.outPath; subdir = "skills"; };
-        yomiyasu = { path = inputs.yomiyasu.outPath; subdir = "skills"; };
-        hol1kgmg = { path = inputs.hol1kgmg-skills.outPath; subdir = "skills"; };
-        security-audit = { path = inputs.security-audit-skill.outPath; subdir = "skills"; };
-        # gist はルート直下に SKILL.md があり、ファイル名がそのままスキル ID になる
-        cognitive-rhythm-writing = { path = inputs.cognitive-rhythm-writing.outPath; filter.maxDepth = 0; };
-        japanese-tech-writing = { path = inputs.japanese-tech-writing.outPath; filter.maxDepth = 0; };
-        local = { path = ./skills; };
-      };
+      templateSources = import ./sources.template.nix inputs;
+      projectSources = import ./sources.nix inputs;
+      allowlist = template: project: lib.subtractLists project.disable (template ++ project.enable);
+      mergeSources = kind: template: project:
+        let dup = builtins.attrNames (builtins.intersectAttrs template project);
+        in if dup == [ ] then template // project
+        else throw "sources.nix の ${kind} が sources.template.nix と重複: ${toString dup}";
+
+      sources = mergeSources "skills" templateSources.skills projectSources.skills;
       catalog = agentLib.discoverCatalog sources;
       selection = agentLib.selectSkills {
         inherit catalog sources;
-        allowlist = import ./skills.nix;
+        allowlist = allowlist (import ./skills.template.nix) (import ./skills.nix);
       };
 
       localTargets = {
         agents = agentLib.defaultLocalTargets.agents // { enable = true; };
       };
 
-      # 有効にする ID は ./rules.nix（skills と対称）
-      ruleSources = {
-        hol1kgmg = { path = inputs.hol1kgmg-rules.outPath; subdir = "rules"; };
-        local = { path = ./rules; };
-      };
-      ruleCatalog = rulesLib.discoverCatalog ruleSources;
+      ruleCatalog = rulesLib.discoverCatalog (mergeSources "rules" templateSources.rules projectSources.rules);
       ruleSelection = rulesLib.selectRules {
         catalog = ruleCatalog;
-        allowlist = import ./rules.nix;
+        allowlist = allowlist (import ./rules.template.nix) (import ./rules.nix);
       };
       ruleTargets = {
         agents = rulesLib.defaultLocalTargets.claude // { dest = ".agents/rules"; enable = true; };
@@ -77,7 +72,7 @@
           ''}/bin/${name}";
         };
       in {
-        # skills.nix / rules.nix の宣言が解決できてバンドルが組めるかの確認（nix flake check）
+        # skills / rules の宣言が解決できてバンドルが組めるかの確認（nix flake check）
         checks.skills = bundle;
         checks.rules = rulesBundle;
 
@@ -96,17 +91,21 @@
           program = "${agentLib.mkLocalInstallProgram { inherit pkgs bundle; targets = localTargets; }}/bin/skills-install-local";
         };
 
-        devShells.default = pkgs.mkShell {
+        # テンプレート管理（派生先は devShells.default を編集）。adr/from-template/0005
+        devShells.template = pkgs.mkShell {
           packages = [
             pkgs.just
-            pkgs.nodejs_22
-            pkgs.sqlite
+            pkgs.jq
             pkgs.gitleaks
             pkgs.lefthook
             pkgs.gh
+            pkgs.git
+            pkgs.dotenvx
             nur-packages.packages.${system}.markserv
+            nur-packages.packages.${system}.portless
             # gh は上で別途入れているため同梱版 default ではなく minimal
             nix-claude-code.packages.${system}.claude-minimal
+            pkgs.codex
           ];
 
           shellHook = ''
@@ -121,6 +120,15 @@
             targets = ruleTargets;
             quiet = true;
           };
+        };
+
+        # --- 派生先が管理。adr/from-template/0005 ---
+        devShells.default = pkgs.mkShell {
+          inputsFrom = [ self.devShells.${system}.template ];
+          packages = [
+            pkgs.nodejs_22
+            pkgs.sqlite
+          ];
         };
       });
 }

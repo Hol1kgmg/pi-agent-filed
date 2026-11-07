@@ -2,3 +2,8 @@ pre-commit:
   commands:
     gitleaks:
       run: gitleaks protect --staged --verbose
+    # dotenvx は .envrc も .env* として検査し除外できないため、.envrc だけのコミットでは起動させない
+    dotenvx:
+      glob: ".env*"
+      exclude: [".envrc"]
+      run: dotenvx ext precommit
