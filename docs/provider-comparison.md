@@ -9,6 +9,8 @@ M2 で使うモデルプロバイダを決めるための比較。対象は `@ea
 
 ## 決定（2026-10-21）
 
+> 2026-11-08: Cloudflare で常時稼働させるため、DeepSeek V4.1 Flash を Workers AI（`@cf/deepseek-ai/deepseek-v4.1-flash-1017`）で呼ぶことにした（[ADR 0002](../adr/pi-durable-dev-env/0002-run-on-cloudflare.md)）。以下は当時の決定。
+
 **試験運用として ChatGPT Plus（$20/月）の定額で始める。** pi-ai の `openai` プロバイダを「Sign in with ChatGPT」（OAuth）で使う。
 
 | 役割 | モデル（初期値） | 理由 |
