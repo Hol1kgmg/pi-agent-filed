@@ -260,6 +260,7 @@
         "nixpkgs": "nixpkgs_2",
         "nur-packages": "nur-packages",
         "security-audit-skill": "security-audit-skill",
+        "stack-diagram": "stack-diagram",
         "vercel-ai": "vercel-ai",
         "web-quality-skills": "web-quality-skills",
         "yomiyasu": "yomiyasu"
@@ -299,6 +300,22 @@
       "original": {
         "owner": "cloudflare",
         "repo": "security-audit-skill",
+        "type": "github"
+      }
+    },
+    "stack-diagram": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793677292,
+        "narHash": "sha256-VUOxIsW0XabuaZA8HxEICuHx2RJKgpdoYlvCaDzmxUM=",
+        "owner": "caru-ini",
+        "repo": "stack-diagram",
+        "rev": "1ed53e3e9525364ae5d82e0430f2bb3f7ef4c838",
+        "type": "github"
+      },
+      "original": {
+        "owner": "caru-ini",
+        "repo": "stack-diagram",
         "type": "github"
       }
     },

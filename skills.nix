@@ -2,6 +2,7 @@
 # ID 一覧は `just skills-list`。
 {
   enable = [
+    "stack-diagram"
   ];
 
   disable = [

@@ -23,6 +23,7 @@
     hol1kgmg-rules = { url = "github:Hol1kgmg/rules"; flake = false; };
 
     # --- project inputs: 派生先が管理。adr/from-template/0005 ---
+    stack-diagram = { url = "github:caru-ini/stack-diagram"; flake = false; };
 
   };
 
@@ -128,7 +129,14 @@
           packages = [
             pkgs.nodejs_22
             pkgs.sqlite
+            (pkgs.python3.withPackages (ps: [ ps.playwright ]))
           ];
+          # stack-diagram の render_png.py 用。pip の playwright install の代わりに Nix のブラウザを使う
+          PLAYWRIGHT_BROWSERS_PATH = pkgs.playwright-driver.browsers.override {
+            withFirefox = false;
+            withWebkit = false;
+          };
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
         };
       });
 }
