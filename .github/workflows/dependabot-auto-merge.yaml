@@ -1,0 +1,33 @@
+name: dependabot-auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    # sync で届く派生リポジトリでは動かさない
+    # 人が push した Dependabot ブランチを自動マージしないよう、作成者と実行者の両方で絞る
+    if: github.repository == 'Hol1kgmg/claude-temp' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      # 書き込み権限を持つため PR のコードは checkout しない。flake.lock は API で読む
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh api -H 'Accept: application/vnd.github.raw' "repos/$REPO/contents/flake.lock?ref=$BASE" > base.json
+          gh api -H 'Accept: application/vnd.github.raw' "repos/$REPO/contents/flake.lock?ref=$HEAD" > head.json
+          changed=$(jq -rn --slurpfile b base.json --slurpfile h head.json \
+            '$h[0].nodes | to_entries[] | select(.value.flake == false and .value.locked != $b[0].nodes[.key].locked) | .key')
+          if [ -n "$changed" ]; then
+            echo "skill / rules の取得元を更新するため手動レビューに回す: $changed"
+            exit 0
+          fi
+          # ブランチ保護の必須チェック check が通るまでマージは待たされる
+          gh pr merge --auto --squash "$PR"

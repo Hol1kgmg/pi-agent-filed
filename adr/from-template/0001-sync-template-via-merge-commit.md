@@ -70,4 +70,5 @@ just sync
 ## More Information
 
 - 関連: [書き込み権限を GitHub App の短命トークンで得る](0002-use-github-app-for-write-access.md)
+- 関連: [テンプレート管理と派生先管理の宣言を別ファイル・別区画に分ける](0005-separate-template-and-project-files.md)（`skills.nix` の衝突への対処）
 - 再検討条件: 自分が日常的に触らない派生リポジトリが増えたら、通知手段（テンプレート元の Watch、または定期実行）を再検討する

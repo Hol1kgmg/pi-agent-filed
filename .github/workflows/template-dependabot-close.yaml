@@ -1,0 +1,56 @@
+name: template-dependabot-close
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  close:
+    # テンプレート由来の更新は template-sync の取り込み PR で届くため、派生側の Dependabot PR は重複になる（adr/from-template/0006）
+    if: github.repository != 'Hol1kgmg/claude-temp' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      # 書き込み権限を持つため PR のコードは checkout しない。変更ファイルと flake.lock は API で読む
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          PR: ${{ github.event.pull_request.html_url }}
+        run: |
+          raw() { gh api -H 'Accept: application/vnd.github.raw' "repos/$1/contents/$2?ref=$3"; }
+          for f in $(gh api --paginate "repos/$REPO/pulls/$NUMBER/files" -q '.[].filename'); do
+            if [ "$f" = flake.lock ]; then
+              raw "$REPO" flake.lock "$BASE" > base.json
+              raw "$REPO" flake.lock "$HEAD" > head.json
+              raw Hol1kgmg/claude-temp flake.lock main > upstream.json
+              # node 名は lock ごとに違いうる（nixpkgs_2 など）ため root input 名で比べる
+              project=$(jq -rn --slurpfile b base.json --slurpfile h head.json --slurpfile u upstream.json '
+                $b[0] as $b | $h[0] as $h
+                | [$h.nodes.root.inputs | keys[]
+                   | select(($b.nodes.root.inputs[.] | type) == "string" and ($h.nodes.root.inputs[.] | type) == "string")
+                   | select($b.nodes[$b.nodes.root.inputs[.]].locked != $h.nodes[$h.nodes.root.inputs[.]].locked)] as $changed
+                | if $changed == [] then "(root input の変更なし)"
+                  else $changed[] | select($u[0].nodes.root.inputs[.] == null) end')
+              if [ -n "$project" ]; then
+                echo "派生側の input を含むため残す: $project"
+                exit 0
+              fi
+            elif ! tpl=$(raw Hol1kgmg/claude-temp "$f" main 2>/dev/null); then
+              echo "テンプレートに無いファイルを含むため残す: $f"
+              exit 0
+            else
+              # 同じ workflow ファイルでも派生側が足した action はテンプレートからは更新されない
+              for a in $(gh api --paginate "repos/$REPO/pulls/$NUMBER/files" -q ".[] | select(.filename == \"$f\") | .patch" \
+                  | grep -oE '^\+.*uses: *[^@ ]+@' | sed -E 's/.*uses: *//'); do
+                if ! grep -qF "$a" <<<"$tpl"; then
+                  echo "テンプレートが使っていない action を含むため残す: $f $a"
+                  exit 0
+                fi
+              done
+            fi
+          done
+          gh pr close "$PR" --delete-branch --comment "テンプレート由来の更新は template-sync の取り込み PR で届くため閉じます（adr/from-template/0006）。"

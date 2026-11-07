@@ -57,5 +57,7 @@ skill と rules の取得元は npins 形式の `registry/sources.lock.json` に
 ## More Information
 
 - 置き換え: [書き込み権限を GitHub App の短命トークンで得る](0002-use-github-app-for-write-access.md)
+- 一部置き換えられた: [skill / rules 以外の Dependabot PR を auto-merge する](0004-auto-merge-non-skill-dependabot-prs.md)（auto-merge しない、の部分）
+- 一時的に一部置き換えられた: [skill / rules を Nix から APM に移す](0007-manage-skills-and-rules-with-apm.md)（skill / rules の取得元を flake input にする部分）。[skill / rules の取得元を flake input に戻す](0008-revert-skill-sources-to-flake-inputs.md) で元に戻した
 - セットアップ手順: [docs/lockfile-automation.md](../../docs/lockfile-automation.md)
 - Dependabot の nix 対応: https://github.blog/changelog/2026-04-07-dependabot-version-updates-now-support-the-nix-ecosystem

@@ -1,7 +1,7 @@
 ---
 name: init-from-template
 description: Hol1kgmg/claude-temp をテンプレートにして生成した直後のリポジトリで、README.md / AGENTS.md / adr/README.md に残るテンプレートのプレースホルダ（{app name} など）を埋め、不要なセクションを削る。「テンプレートの初期化」「プレースホルダを埋めて」「テンプレート固有のものを消して」と言われたとき、または生成直後のリポジトリで README に {app name} が残っているときに使う。
-allowed-tools: Bash(git remote:*), Bash(git status:*), Bash(just sync:*), Bash(nix flake check:*), Read, Edit, Grep, Glob, AskUserQuestion
+allowed-tools: Bash(git remote:*), Bash(git status:*), Bash(just sync:*), Bash(nix flake check:*), Bash(gh api -X PUT repos/*/actions/permissions/workflow:*), Read, Edit, Grep, Glob, AskUserQuestion
 ---
 
 # init-from-template — テンプレート生成直後の初期化
@@ -42,6 +42,8 @@ just sync
 ```
 
 作業ツリーが clean でなければ中断する（コミットまたは退避してもらう）。
+
+テンプレートに処理中の Dependabot PR があると sync は止まる。PR の一覧をユーザーに見せ、無視してよいと言われたら `SYNC_IGNORE_OPEN_PRS=1 just sync` で再実行する。
 
 初回の `just sync` は共通祖先が無いため、テンプレート由来で派生側が変更したファイルを upstream 版で上書きする（`-X theirs`）。プレースホルダを埋める **前** に実行すれば上書きされるものが無く、このマージコミットが以降の共通祖先になる。sync が衝突で止まったら、解決してから次へ進む。
 
@@ -86,6 +88,18 @@ Edit で行う。sed は使わない。
 - `nix` と `github-actions` の両 `updates` エントリに `open-pull-requests-limit: 0` を追加する。`0` は version updates を無効化する公式の値
 - ファイルは削除しない（同期対象）。以後の `just sync` でこのファイルが衝突したら `0` を残して解決する
 
+**GitHub Actions による PR 作成の許可**
+
+`template-sync` workflow が draft PR を作るために要る（[adr/from-template/0006](../../adr/from-template/0006-automate-template-sync-pr.md)）。新しいリポジトリでは既定で無効。
+
+```bash
+gh api -X PUT repos/<owner>/<repo>/actions/permissions/workflow -F can_approve_pull_request_reviews=true
+```
+
+`<owner>/<repo>` は手順 1 の origin URL から埋める。`{owner}/{repo}` は使わない（手順 2 で upstream remote が入り、gh が upstream 側を選ぶため）。
+
+失敗したら（権限不足など）、Settings → Actions → General の「Allow GitHub Actions to create and approve pull requests」を手で有効にするよう伝える。
+
 ### 5. 確認
 
 - 手順 1 の Grep を再実行し、ヒットが 0 であること
@@ -97,4 +111,4 @@ Edit で行う。sed は使わない。
 変更は自動でコミットしない。差分を要約し、次を提案する:
 
 - コミット（例: `chore: テンプレートのプレースホルダを埋める`）
-- `skills.nix` で不要なスキルを行ごと消す（派生ごとに判断が異なるため、このスキルでは触らない）
+- 不要なスキルを `skills.nix` の `disable` に足す（派生ごとに判断が異なるため、このスキルでは触らない。`skills.template.nix` は同期対象なので編集しない）

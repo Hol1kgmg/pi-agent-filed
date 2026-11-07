@@ -1,0 +1,68 @@
+name: template-sync
+
+on:
+  # 土曜 09:00 JST。テンプレートの Dependabot（土曜 08:00）の後。終わっていなくても just sync が止める
+  schedule:
+    - cron: "0 0 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  draft-pr:
+    # 差分は人が just sync-pr で入れる。GITHUB_TOKEN では workflow ファイルの変更を push できないため（adr/from-template/0006）
+    if: github.repository != 'Hol1kgmg/claude-temp'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --no-tags https://github.com/Hol1kgmg/claude-temp.git main
+          upstream=$(git rev-parse FETCH_HEAD)
+          if [ -z "$(git rev-list -n 1 HEAD..FETCH_HEAD)" ]; then
+            echo "取り込む更新はない"
+            exit 0
+          fi
+          # 開いている PR の中身も本文も人のものなので触らない。それより新しい更新はマージ後の次回に届く
+          if [ -n "$(gh pr list --head template-sync --state open --json number -q '.[0].number')" ]; then
+            echo "取り込み PR が開いている"
+            exit 0
+          fi
+
+          if base=$(git merge-base HEAD FETCH_HEAD); then
+            compare="https://github.com/Hol1kgmg/claude-temp/compare/$base...$upstream"
+            files=$(git diff --name-only "$base" FETCH_HEAD | head -n 100 | sed 's/^/- `/; s/$/`/')
+          else
+            compare="https://github.com/Hol1kgmg/claude-temp/tree/$upstream"
+            files="- 初回の取り込み（共通祖先なし）"
+          fi
+          cat > body.md <<EOF
+          テンプレート元に未取り込みの更新があります（$upstream）。
+
+          - 差分（この PR の作成時点）: $compare
+
+          ## 取り込み手順
+
+          この PR は空コミットだけを含みます。手元で次を実行すると、実行時点の最新の差分に置き換わり ready for review になります。
+
+          \`\`\`bash
+          just sync-pr
+          \`\`\`
+
+          **Create a merge commit** でマージしてください（squash / rebase は共通祖先を壊します。adr/from-template/0001）。
+
+          ## 変更されたファイル（最大 100 件）
+
+          $files
+          EOF
+
+          git switch -C template-sync
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit --allow-empty -m "chore: テンプレートの取り込みを待つ"
+          git push --force origin template-sync
+          gh pr create --draft --base main --head template-sync --title "chore: テンプレートの更新を取り込む" --body-file body.md
