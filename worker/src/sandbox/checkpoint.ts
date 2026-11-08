@@ -21,8 +21,7 @@ export async function checkpointToolResult(
         {
           severity: "error",
           code: "workspace_checkpoint_failed",
-          message:
-            "Workspace checkpoint failed. Work may not survive a restart. Do not repeat the command.",
+          message: `Workspace checkpoint failed (${String(error)}). Work may not survive a restart. Do not repeat the command.`,
         },
       ],
     };

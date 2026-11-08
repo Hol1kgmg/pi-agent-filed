@@ -42,6 +42,13 @@ export function createAgentOptions(
             ["stop", "length", "error"].includes(message.stopReason)
               ? reply(textOf(message.content) || message.errorMessage || "")
               : undefined,
+          // A terminating round has no final answer for afterResponse to send, so the developer would see nothing.
+          afterRun: async (run, api, context) => {
+            if (run.reason !== "terminate") return undefined;
+            const entry = await api.entry(run.last, context);
+            await reply((entry?.model ?? []).map((m) => textOf(m.content as never)).join("\n"));
+            return undefined;
+          },
         }),
       ],
     }),
