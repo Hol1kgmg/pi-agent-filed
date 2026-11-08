@@ -8,18 +8,21 @@
   "observability": { "enabled": true },
   "containers": [
     {
-      "class_name": "Sandbox",
-      "image": "./sandbox.Dockerfile",
-      "max_instances": 5,
-      // The ~1GB workspace snapshot plus npm builds need more than the default lite instance.
-      "instance_type": { "vcpu": 1, "memory_mib": 4096, "disk_mb": 16000 },
+      // Only the durable_object policy can snapshot, and a policy is fixed per application, so this is a new one.
+      "name": "pi-agent-filed-workspace",
+      "class_name": "Workspace",
+      "scheduling_policy": "durable_object",
+      "images": { "base": { "dockerfile": "./sandbox.Dockerfile" } },
     },
   ],
   "durable_objects": {
     "bindings": [
       { "name": "SESSIONS", "class_name": "Session" },
-      { "name": "SANDBOX", "class_name": "Sandbox" },
+      { "name": "SANDBOX", "class_name": "Workspace" },
     ],
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Session", "Sandbox"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Session", "Sandbox"] },
+    { "tag": "v2", "new_sqlite_classes": ["Workspace"] },
+  ],
 }

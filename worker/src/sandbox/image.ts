@@ -1,10 +1,12 @@
 /** Snapshot restores keep the original filesystem; only fresh workspaces start from the image. */
-export function startupOptions(snapshot: ContainerSnapshot | undefined): ContainerStartupOptions {
+export function startupOptions(image: string, snapshot: ContainerSnapshot | undefined): ContainerStartupOptions {
   return {
-    ...(snapshot ? { containerSnapshot: snapshot } : {}),
+    ...(snapshot ? { containerSnapshot: snapshot } : { image }),
     entrypoint: ["sleep", "infinity"],
     enableInternet: true,
     env: {},
+    // The ~1GB workspace snapshot plus npm builds need more than the default lite instance.
+    instance: { vcpu: 1, memoryMib: 4096, diskMb: 16000 },
   };
 }
 

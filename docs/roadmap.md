@@ -128,7 +128,9 @@ Cloudflare の Durable Object（DO）で [pi-durable](https://github.com/earendi
 ### M14 デプロイ
 
 - `just deploy`（`wrangler deploy`）でイメージをビルドしてプッシュし、Worker、DO、コンテナを配る。secret は `just secrets`（`wrangler secret bulk worker/.dev.vars`）で登録する。ログは `just tail` で見る
-- コンテナは `instance_type` を 1 vCPU・4 GiB・16 GB にした（requirements の見積もりと同じ）。既定の lite では、約 1GB の snapshot と npm のビルドに足りないため
+- コンテナは 1 vCPU・4 GiB・16 GB にした（requirements の見積もりと同じ）。既定の lite では、約 1GB の snapshot と npm のビルドに足りないため
+- デプロイ先では、ツールを実行するたびに `snapshotContainer()` が「Snapshots are not available because this container does not support the requested snapshot operation.」で失敗し、run が打ち切られて Slack に何も返らなかった。snapshot は `scheduling_policy: "durable_object"`（beta）のアプリでしか使えず、指定を省くと `default` になる。`wrangler dev` はこれを確かめない。方式はアプリごとに変えられないので、別名のアプリ（`pi-agent-filed-workspace`、クラス `Workspace`）を作った。この方式では `instance_type` と `max_instances` を書けないため、大きさは `start()` の `instance` で渡し、台数の上限はアカウントの上限に任せる。旧アプリと空の `Sandbox` クラスは、切り替えを確かめてから消す
+- 打ち切られた run も、最後のツールの結果をスレッドに送るようにした（`afterRun`）。snapshot の失敗の理由はツールの結果に入る
 - コンテナ DO は `ctx.container` を直接使うので `sleepAfter` はない。無操作で止まったときの扱いは M8 で見る
 - secret を登録する前は `SLACK_SIGNING_SECRET` がなく、Slack の Request URL の Verify が 401 で失敗した。`just secrets` のあとに通った
 - 未確認: デプロイ先での Slack の対話、再デプロイ後の再開、snapshot の時間と料金、snapshot の期限、GitHub App のトークンでの clone / push / PR の作成

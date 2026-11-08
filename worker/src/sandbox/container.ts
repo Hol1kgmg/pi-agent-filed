@@ -3,8 +3,11 @@ import type { Duplex } from "./connection";
 import { startupOptions, TRUST_ENV } from "./image";
 import { serial } from "../serial";
 
+// ponytail: kept empty while the old default-policy container application still references it; delete both together.
+export class Sandbox extends DurableObject<Env> {}
+
 /** Internal binding only: do not expose this DO's RPC through a public HTTP route. */
-export class Sandbox extends DurableObject<Env> {
+export class Workspace extends DurableObject<Env> {
   private readonly exclusive = serial();
 
   /** Opens the pi-env daemon in this goal's container, starting the container if needed. */
@@ -14,7 +17,7 @@ export class Sandbox extends DurableObject<Env> {
       if (!container) throw new Error("sandbox_unconfigured");
       if (!container.running) {
         const snapshot = await this.ctx.storage.get<ContainerSnapshot>("snapshot");
-        container.start(startupOptions(snapshot));
+        container.start(startupOptions(container.images.base!, snapshot));
       }
       // Intercepts last until the container stops, so they are registered again every time.
       const egress = (this.ctx.exports as unknown as Record<string, (init: object) => Fetcher>).Egress!({});
