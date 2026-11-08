@@ -112,6 +112,18 @@ worker-install:
 dev:
     cd worker && npx wrangler dev --port 8787
 
+# Build the sandbox image and deploy the Worker, DOs and container (needs Docker and `wrangler login`)
+deploy:
+    cd worker && npx wrangler deploy
+
+# Upload worker/.dev.vars as the deployed Worker's secrets
+secrets:
+    cd worker && npx wrangler secret bulk .dev.vars
+
+# Stream the deployed Worker's logs
+tail:
+    cd worker && npx wrangler tail --format pretty
+
 # Expose the local Worker to Slack's Events API; set <printed URL>/slack/events as the Request URL
 tunnel:
     cloudflared tunnel --url http://localhost:8787

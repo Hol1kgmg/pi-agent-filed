@@ -52,7 +52,7 @@ Cloudflare の Durable Object（DO）で [pi-durable](https://github.com/earendi
 | M11 | ローカルのミニマム版 | `wrangler dev` で、Worker（Bearer トークンで認証する Webhook）、セッション DO（PO だけ、Workers AI の DeepSeek V4.1 Flash）、コンテナ DO（touka から写した pi-env の RPC と `createCodingTools()`）を動かす。サブエージェント、リポジトリ DO、プレビュー、Slack は入れない | curl で指示を出すと、PO がコンテナの中でファイルを作る。セッション DO を止めても、未完了の submission から再開できる。Bearer トークンのない Webhook を拒否する | V4.1 Flash のモデル ID と定義の方法（pi-ai を上げるか、自前で定義するか）、pi 1.5 への上げ方、Agents SDK を使うか、目標の ID とセッション DO の名前の付け方、touka から写す範囲、コンテナのイメージ（Nix を使うか）。資格情報の差し込みと `snapshotContainer()` がローカルで動くかを調べ、動かなければ M14 で確かめる。ツール呼び出しが入ると assistant message の text ブロックが複数になるので、表示はすべてのブロックを対象にする。`host/`（ローカル版）を消す時期（決定: M11 のあとに消した） | 完了 |
 | M4 | 単体コーディングエージェント | M11 に統合した（ExecutionEnv を自作せず、touka の実行環境の層を写すため） | — | ガードの方針と `agents/<repo>/` の形式は M5 に移す | 統合 |
 | M13 | Slack の入口 | Slack App を作り、Events API を Worker で受ける。ローカルでは `cloudflared` のトンネル経由で受ける | スレッドで PO と対話できる。1 スレッドが 1 つのセッション DO に対応する。署名が不正な要求と、許可していないユーザーの要求を拒否する。ACK を 3 秒以内に返し、モデルの処理は DO で進める | submission を保存してから ACK する手順、スレッドへの返信を再送するか（touka の outbox を写すか）、Webhook の入口を残すか、Slack App の manifest（touka の `trigger-slack` を参考にする） | 完了 |
-| M14 | デプロイ | Worker、DO、コンテナをデプロイし、secret を登録する | ADR 0002 の Verification のうち、資格情報、再開、snapshot の項目をデプロイ先で満たす | デプロイの手順、コンテナの大きさと `sleepAfter`、snapshot の期限（30 日）の確認、Slack の Request URL の切り替え | 未着手 |
+| M14 | デプロイ | Worker、DO、コンテナをデプロイし、secret を登録する | ADR 0002 の Verification のうち、資格情報、再開、snapshot の項目をデプロイ先で満たす | デプロイの手順、コンテナの大きさと `sleepAfter`、snapshot の期限（30 日）の確認、Slack の Request URL の切り替え | 進行中 |
 | M5 | PO エージェント | PO 用の instructions と、ガードの設定 | Slack のスレッドで対話でき、実行中の steer / follow-up を受け付ける。開発者の確認が必要になったら、スレッドでメンションする。`beforeTool` で危険なコマンドを止められる | PO の責務、目標の決め方、メンションする条件、ガードの方針と `agents/<repo>/` の形式。follow-up を受け付けると 1 回の run で複数の input が完了するので、返信は input 単位ではなく run 単位にする | 未着手 |
 | M6 | サブエージェント | spec / design / impl / test / review のサブエージェント。作業の単位ごとに新しい子会話で起動する | PO から spawn・指示・停止・一覧ができ、結果が PO に報告される。サブエージェントの会話が作業の単位を越えて続かない。DO の eviction のあと、実行中のサブエージェントが同じ子会話で再開する | 役割ごとのモデル・ツール、基本の指示の置き場所（本体に置き、`agents/<repo>/` にはリポジトリ固有の追記だけを置く想定）、サブエージェントの再帰を禁止するか、作業の単位の区切り方。各役割の視点や手順は後から整備する | 未着手 |
 | M12 | コンテキスト DB | リポジトリ DO のコンテキスト DB と、それを RPC で読み書きするホスト側のツール | エージェントが必要な情報をツールで取得できる。2 つの目標のセッション DO から同時に書け、`goal_id` で区別できる。目標を終えても残る | テーブルの設計（知識・判断・タスク・目標）、セッション DB との関係、git に残す仕様の文書との分担 | 未着手 |
@@ -125,6 +125,13 @@ Cloudflare の Durable Object（DO）で [pi-durable](https://github.com/earendi
   - Slack でメンションすると PO が `bash` でコンテナを確かめ、スレッドに返信した。Markdown も崩れずに表示された。同じスレッドの 2 回目のメンションは同じセッション DO に入り、`/workspace/slack.txt` を作って、1 回目の内容を答えた
 - 既知の問題: Quick Tunnel の URL は、cloudflared が動いていても DNS から消えることがある。Slack の要求が届かないときは `just tunnel` を起動し直し、Request URL を貼り直す
 - 既知の問題: 復旧で `afterResponse` が呼び直されると、同じ応答が 2 回送られうる。重なりが目立ったら、送った応答の receipt を DO に残す
+### M14 デプロイ
+
+- `just deploy`（`wrangler deploy`）でイメージをビルドしてプッシュし、Worker、DO、コンテナを配る。secret は `just secrets`（`wrangler secret bulk worker/.dev.vars`）で登録する。ログは `just tail` で見る
+- コンテナは `instance_type` を 1 vCPU・4 GiB・16 GB にした（requirements の見積もりと同じ）。既定の lite では、約 1GB の snapshot と npm のビルドに足りないため
+- コンテナ DO は `ctx.container` を直接使うので `sleepAfter` はない。無操作で止まったときの扱いは M8 で見る
+- secret を登録する前は `SLACK_SIGNING_SECRET` がなく、Slack の Request URL の Verify が 401 で失敗した。`just secrets` のあとに通った
+- 未確認: デプロイ先での Slack の対話、再デプロイ後の再開、snapshot の時間と料金、snapshot の期限、GitHub App のトークンでの clone / push / PR の作成
 
 ## 進め方
 

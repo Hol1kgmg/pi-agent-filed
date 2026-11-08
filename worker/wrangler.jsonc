@@ -9,6 +9,8 @@
       "class_name": "Sandbox",
       "image": "./sandbox.Dockerfile",
       "max_instances": 5,
+      // The ~1GB workspace snapshot plus npm builds need more than the default lite instance.
+      "instance_type": { "vcpu": 1, "memory_mib": 4096, "disk_mb": 16000 },
     },
   ],
   "durable_objects": {
