@@ -45,7 +45,13 @@ async function slack(request: Request, env: Env): Promise<Response> {
 
   const thread = { channel: event.channel, ts: event.thread_ts ?? event.ts };
   const goal = `${thread.channel}-${thread.ts.replace(".", "_")}`;
-  const input = (event.text ?? "").replace(/<@[A-Z0-9]+>/g, "").trim();
+  // Slack escapes only these three; &amp; goes last so "&amp;lt;" stays "&lt;".
+  const input = (event.text ?? "")
+    .replace(/<@[A-Z0-9]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .trim();
   if (input === "") return new Response(null, { status: 200 });
   // Slack resends an event it got no 200 for within 3 seconds with the same event_id, which the submission dedupes.
   await env.SESSIONS.getByName(goal).submit(goal, payload.event_id, input, thread);

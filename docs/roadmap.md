@@ -133,7 +133,10 @@ Cloudflare の Durable Object（DO）で [pi-durable](https://github.com/earendi
 - 打ち切られた run も、最後のツールの結果をスレッドに送るようにした（`afterRun`）。snapshot の失敗の理由はツールの結果に入る
 - コンテナ DO は `ctx.container` を直接使うので `sleepAfter` はない。無操作で止まったときの扱いは M8 で見る
 - secret を登録する前は `SLACK_SIGNING_SECRET` がなく、Slack の Request URL の Verify が 401 で失敗した。`just secrets` のあとに通った
-- 未確認: 再デプロイ後の再開、snapshot の時間と料金、snapshot の期限、GitHub App のトークンでの clone / push / PR の作成
+- 再デプロイでは生成は止まらなかった。`sleep 300` の 18 秒後にデプロイしても、bash は 1 回で終わり、5 分後に返信が来た。そのツールの結果の checkpoint は、デプロイ前の版（`2cc0ac14`）のコンテナ DO で動いていた。実行中の DO は古い版のまま仕事を終えるので、alarm からの再開は通らない。再開そのものは M11 で、DO を止めて確かめた
+- デプロイ先の snapshot は 4481 バイトだった（`wrangler dev` では 976MB）。`durable_object` 方式ではイメージとの差分だけを持つとみられる
+- Slack は本文の `&`、`<`、`>` を `&amp;`、`&lt;`、`&gt;` にして送るので、入口で元に戻す。戻す前は、PO に `&amp;&amp;` のまま届いていた
+- 未確認: snapshot の保存と戻しにかかる時間と料金、snapshot の期限、GitHub App のトークンでの clone / push / PR の作成
 
 ## 進め方
 
