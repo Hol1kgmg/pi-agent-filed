@@ -1,5 +1,5 @@
 export { Session } from "./session";
-export { Sandbox, Workspace } from "./sandbox/container";
+export { Workspace } from "./sandbox/container";
 export { Egress } from "./sandbox/egress";
 
 const route = /^\/goals\/([A-Za-z0-9_-]{1,64})$/;

@@ -3,9 +3,6 @@ import type { Duplex } from "./connection";
 import { startupOptions, TRUST_ENV } from "./image";
 import { serial } from "../serial";
 
-// ponytail: kept empty while the old default-policy container application still references it; delete both together.
-export class Sandbox extends DurableObject<Env> {}
-
 /** Internal binding only: do not expose this DO's RPC through a public HTTP route. */
 export class Workspace extends DurableObject<Env> {
   private readonly exclusive = serial();

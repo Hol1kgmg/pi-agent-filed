@@ -24,5 +24,6 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Session", "Sandbox"] },
     { "tag": "v2", "new_sqlite_classes": ["Workspace"] },
+    { "tag": "v3", "deleted_classes": ["Sandbox"] },
   ],
 }
