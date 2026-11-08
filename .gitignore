@@ -16,3 +16,5 @@ workspace/
 
 .dev.vars
 .wrangler/
+# nix develop を worker/ で起動すると shellHook がそこにもスキルとルールを入れる
+worker/.agents/

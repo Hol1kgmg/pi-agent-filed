@@ -112,6 +112,10 @@ worker-install:
 dev:
     cd worker && npx wrangler dev --port 8787
 
+# Expose the local Worker to Slack's Events API; set <printed URL>/slack/events as the Request URL
+tunnel:
+    cloudflared tunnel --url http://localhost:8787
+
 # Send input to a goal's PO through the local Webhook
 say GOAL INPUT:
     @. worker/.dev.vars && curl -sS -X POST "http://localhost:8787/goals/{{GOAL}}" -H "Authorization: Bearer $WEBHOOK_TOKEN" -H 'Content-Type: application/json' -d "$(jq -n --arg input {{quote(INPUT)}} '{requestId: (now | tostring), input: $input}')"; echo

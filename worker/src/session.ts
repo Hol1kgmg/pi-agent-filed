@@ -2,16 +2,13 @@ import { DurableObject } from "cloudflare:workers";
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context";
 import { Harness, type Wake } from "@earendil-works/pi-durable";
 import { openDurableObjectSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/cloudflare";
-import { createAgentOptions } from "./agent";
+import { createAgentOptions, textOf } from "./agent";
 import { sandbox } from "./sandbox/env";
 
 /** While work can run, the alarm stays this far ahead, so an evicted instance is woken to resume it. */
 const HEARTBEAT_MS = 60_000;
 
-const textOf = (content: string | readonly { type: string; text?: string; name?: string }[]): string =>
-  typeof content === "string"
-    ? content
-    : content.map((block) => (block.type === "text" ? block.text : block.type === "toolCall" ? `[${block.name}]` : "")).join("");
+export type SlackThread = { channel: string; ts: string };
 
 /** One goal: its Harness and session DB. */
 export class Session extends DurableObject<Env> {
@@ -35,7 +32,7 @@ export class Session extends DurableObject<Env> {
     const harness = await Harness.open(
       await openDurableObjectSqliteStorage(this.ctx.storage),
       {
-        ...createAgentOptions(this.env, box),
+        ...createAgentOptions(this.env, box, (text) => this.#reply(text)),
         onReport: ({ error, ...info }) => console.error("harness_report", String(error), JSON.stringify(info)),
         onWake: (wake) => void this.#arm(wake).catch(() => this.ctx.abort("Alarm write failed")),
       },
@@ -49,9 +46,9 @@ export class Session extends DurableObject<Env> {
     harness.resume();
   }
 
-  async submit(goal: string, requestId: string, input: string): Promise<{ submissionId: number }> {
+  async submit(goal: string, requestId: string, input: string, thread?: SlackThread): Promise<{ submissionId: number }> {
     if (this.#goal === undefined) {
-      await this.ctx.storage.put("goal", goal);
+      await this.ctx.storage.put(thread ? { goal, slack: thread } : { goal });
       this.#goal = goal;
     }
     // Arm before admitting work: an instance that dies before `onWake` runs is still woken.
@@ -73,6 +70,19 @@ export class Session extends DurableObject<Env> {
       .map((entry) => ({ kind: entry.kind, text: (entry.model ?? []).map((m) => textOf(m.content as never) || (m as { errorMessage?: string }).errorMessage || "").join("\n") }))
       .filter((entry) => entry.text !== "");
     return { pending, entries };
+  }
+
+  async #reply(text: string): Promise<void> {
+    const thread = await this.ctx.storage.get<SlackThread>("slack");
+    if (thread === undefined || text === "") return;
+    const response = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: { authorization: `Bearer ${this.env.SLACK_BOT_TOKEN}`, "content-type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ channel: thread.channel, thread_ts: thread.ts, markdown_text: text }),
+    });
+    const result = (await response.json().catch(() => ({ ok: false, error: `http ${response.status}` }))) as { ok: boolean; error?: string };
+    // ponytail: a failed post is only logged; add an outbox with retries if replies go missing.
+    if (!result.ok) console.error("slack_post_failed", result.error);
   }
 
   override async alarm(): Promise<void> {

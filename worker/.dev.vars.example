@@ -10,3 +10,8 @@ GITHUB_APP_PRIVATE_KEY=
 GITHUB_INSTALLATION_ID=
 # owner/repo
 GITHUB_REPOSITORY=
+# Slack App の Basic Information → Signing Secret と、OAuth & Permissions → Bot User OAuth Token（xoxb-）
+SLACK_SIGNING_SECRET=
+SLACK_BOT_TOKEN=
+# PO に指示できる Slack のユーザー ID（U から始まる）。カンマ区切り
+SLACK_ALLOWED_USERS=

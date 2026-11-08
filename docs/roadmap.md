@@ -51,7 +51,7 @@ Cloudflare の Durable Object（DO）で [pi-durable](https://github.com/earendi
 | M3 | SQLite 永続化 | ホストで `openNodeSqliteStorage` を使い保存・再開する | sqlite3 で JSON レコードを確認できる。実行途中の kill から `resume()` で再開できる。会話を JSONL で書き出せる | DB ファイルのホスト上の配置（リポジトリ内 / 外）、WAL の扱い。決定: リポジトリ外（`~/.config/pi-agent-filed/session.sqlite`）、WAL は durable の既定のまま。のちに既定を本体の `.data/` に変えた（ADR 0001）。Cloudflare 版では DO の SQLite に置く（ADR 0002） | 完了 |
 | M11 | ローカルのミニマム版 | `wrangler dev` で、Worker（Bearer トークンで認証する Webhook）、セッション DO（PO だけ、Workers AI の DeepSeek V4.1 Flash）、コンテナ DO（touka から写した pi-env の RPC と `createCodingTools()`）を動かす。サブエージェント、リポジトリ DO、プレビュー、Slack は入れない | curl で指示を出すと、PO がコンテナの中でファイルを作る。セッション DO を止めても、未完了の submission から再開できる。Bearer トークンのない Webhook を拒否する | V4.1 Flash のモデル ID と定義の方法（pi-ai を上げるか、自前で定義するか）、pi 1.5 への上げ方、Agents SDK を使うか、目標の ID とセッション DO の名前の付け方、touka から写す範囲、コンテナのイメージ（Nix を使うか）。資格情報の差し込みと `snapshotContainer()` がローカルで動くかを調べ、動かなければ M14 で確かめる。ツール呼び出しが入ると assistant message の text ブロックが複数になるので、表示はすべてのブロックを対象にする。`host/`（ローカル版）を消す時期（決定: M11 のあとに消した） | 完了 |
 | M4 | 単体コーディングエージェント | M11 に統合した（ExecutionEnv を自作せず、touka の実行環境の層を写すため） | — | ガードの方針と `agents/<repo>/` の形式は M5 に移す | 統合 |
-| M13 | Slack の入口 | Slack App を作り、Events API を Worker で受ける。ローカルでは `cloudflared` のトンネル経由で受ける | スレッドで PO と対話できる。1 スレッドが 1 つのセッション DO に対応する。署名が不正な要求と、許可していないユーザーの要求を拒否する。ACK を 3 秒以内に返し、モデルの処理は DO で進める | submission を保存してから ACK する手順、スレッドへの返信を再送するか（touka の outbox を写すか）、Webhook の入口を残すか、Slack App の manifest（touka の `trigger-slack` を参考にする） | 未着手 |
+| M13 | Slack の入口 | Slack App を作り、Events API を Worker で受ける。ローカルでは `cloudflared` のトンネル経由で受ける | スレッドで PO と対話できる。1 スレッドが 1 つのセッション DO に対応する。署名が不正な要求と、許可していないユーザーの要求を拒否する。ACK を 3 秒以内に返し、モデルの処理は DO で進める | submission を保存してから ACK する手順、スレッドへの返信を再送するか（touka の outbox を写すか）、Webhook の入口を残すか、Slack App の manifest（touka の `trigger-slack` を参考にする） | 完了 |
 | M14 | デプロイ | Worker、DO、コンテナをデプロイし、secret を登録する | ADR 0002 の Verification のうち、資格情報、再開、snapshot の項目をデプロイ先で満たす | デプロイの手順、コンテナの大きさと `sleepAfter`、snapshot の期限（30 日）の確認、Slack の Request URL の切り替え | 未着手 |
 | M5 | PO エージェント | PO 用の instructions と、ガードの設定 | Slack のスレッドで対話でき、実行中の steer / follow-up を受け付ける。開発者の確認が必要になったら、スレッドでメンションする。`beforeTool` で危険なコマンドを止められる | PO の責務、目標の決め方、メンションする条件、ガードの方針と `agents/<repo>/` の形式。follow-up を受け付けると 1 回の run で複数の input が完了するので、返信は input 単位ではなく run 単位にする | 未着手 |
 | M6 | サブエージェント | spec / design / impl / test / review のサブエージェント。作業の単位ごとに新しい子会話で起動する | PO から spawn・指示・停止・一覧ができ、結果が PO に報告される。サブエージェントの会話が作業の単位を越えて続かない。DO の eviction のあと、実行中のサブエージェントが同じ子会話で再開する | 役割ごとのモデル・ツール、基本の指示の置き場所（本体に置き、`agents/<repo>/` にはリポジトリ固有の追記だけを置く想定）、サブエージェントの再帰を禁止するか、作業の単位の区切り方。各役割の視点や手順は後から整備する | 未着手 |
@@ -114,6 +114,17 @@ Cloudflare の Durable Object（DO）で [pi-durable](https://github.com/earendi
 - 既知の問題: 無操作でコンテナが止まると、次の最初のツール呼び出しが `pi-env connection lost` で失敗する（2 回目で新しいコンテナにつながる）。ContainerConnection が止まった daemon を検知するのは ping が 30 秒途切れたときだけのため
 - 修正: モデルの呼び出しが失敗しても `just show` に何も出なかった。失敗した assistant のエントリは本文が空でエラー文が `errorMessage` にだけ入り、`show` が空のエントリを落としていたため。本文が空なら `errorMessage` を出す
 - 未確認（M14 で確かめる）: snapshot の保存にかかる時間と料金（ツールのたびに約 1GB）、デプロイ先での alarm による再開、GitHub App のトークンでの clone / push / PR の作成
+### M13 Slack の入口
+
+- `POST /slack/events`（`src/index.ts`）: 署名（`v0:{timestamp}:{body}` の HMAC-SHA256）と 5 分以内の timestamp を確かめ、`app_mention` だけを受け付ける。`SLACK_ALLOWED_USERS` にないユーザーと bot の投稿は捨てる。スレッドの中でもメンションが要る（`message.channels` を購読すると、スレッドとセッションの対応を毎回確かめることになるため）。Bearer トークンの Webhook は検証用に残した
+- 目標の ID は `<channel>-<thread_ts>`（`.` は `_`）。submission を保存してから 200 を返す。`requestId` は Slack の `event_id` で、Slack の再送は pi-durable が同じ submission にまとめる
+- 返信: `GenerationTask` の `afterResponse` で、`stopReason` が `stop` / `length` / `error` の応答を `chat.postMessage`（`markdown_text`）でスレッドに送る。pi-durable に run の完了を知らせる DO 側のコールバックはなく、`afterRun` は失敗した run で呼ばれないため。モデルの失敗もスレッドに出る。touka の outbox は写さず、送信の失敗はログに出すだけ。PO に返信のツールを持たせる方式は、モデルが呼び忘れると返信が来ないので採らなかった
+- Slack App は `worker/slack-manifest.yaml`（`app_mentions:read` と `chat:write`）から作る。ローカルでは `just tunnel`（cloudflared の Quick Tunnel）の URL を Request URL にする
+- 確認結果（`wrangler dev`）
+  - 自分で署名した要求で、`url_verification` に challenge を返すこと、署名が不正な要求と 5 分より古い timestamp を 401 で拒否すること、許可していないユーザーのメンションがセッションに入らないことを確かめた
+  - Slack でメンションすると PO が `bash` でコンテナを確かめ、スレッドに返信した。Markdown も崩れずに表示された。同じスレッドの 2 回目のメンションは同じセッション DO に入り、`/workspace/slack.txt` を作って、1 回目の内容を答えた
+- 既知の問題: Quick Tunnel の URL は、cloudflared が動いていても DNS から消えることがある。Slack の要求が届かないときは `just tunnel` を起動し直し、Request URL を貼り直す
+- 既知の問題: 復旧で `afterResponse` が呼び直されると、同じ応答が 2 回送られうる。重なりが目立ったら、送った応答の receipt を DO に残す
 
 ## 進め方
 
