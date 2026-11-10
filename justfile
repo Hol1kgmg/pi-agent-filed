@@ -104,34 +104,34 @@ scan-staged:
 docs *ARGS:
     portless run --name docs.{{file_name(parent_directory(`git rev-parse --path-format=absolute --git-common-dir`))}} sh -c 'markserv . -p "${PORT:-8080}" -a 127.0.0.1 --browser=false "$@"' _ {{ARGS}}
 
-# Install host dependencies
-host-install:
-    cd host && npm ci
+# Install worker dependencies
+worker-install:
+    cd worker && npm ci
 
-# Sign in with ChatGPT for the openai provider
-login:
-    cd host && node --experimental-strip-types login.ts
+# Run the Worker, DOs and the sandbox container locally (needs Docker)
+dev:
+    cd worker && npx wrangler dev --port 8787
 
-# Run the faux-provider chat example
-chat:
-    cd host && node --experimental-strip-types examples/14-chat.ts
+# Build the sandbox image and deploy the Worker, DOs and container (needs Docker and `wrangler login`)
+deploy:
+    cd worker && npx wrangler deploy
 
-# Stream an answer from a real model
-real-model:
-    cd host && node --experimental-strip-types examples/16-real-model.ts
+# Upload worker/.dev.vars as the deployed Worker's secrets
+secrets:
+    cd worker && npx wrangler secret bulk .dev.vars
 
-# Recipes that cd into host/ would otherwise resolve a relative path to a different directory than db/export.
-export PI_AGENT_FILED_HOME := clean(join(invocation_directory(), env("PI_AGENT_FILED_HOME", justfile_directory() / ".data")))
-db := PI_AGENT_FILED_HOME / "session.sqlite"
+# Stream the deployed Worker's logs
+tail:
+    cd worker && npx wrangler tail --format pretty
 
-# Ask the persistent root conversation (no question: finish interrupted inputs)
-ask *QUESTION:
-    @cd host && node --disable-warning=ExperimentalWarning --experimental-strip-types ask.ts {{quote(QUESTION)}}
+# Expose the local Worker to Slack's Events API; set <printed URL>/slack/events as the Request URL
+tunnel:
+    cloudflared tunnel --url http://localhost:8787
 
-# Count stored records per table
-db:
-    @sqlite3 -readonly {{quote(db)}} "SELECT 'conversations', count(*) FROM conversations UNION ALL SELECT 'entries', count(*) FROM entries UNION ALL SELECT 'tasks', count(*) FROM tasks UNION ALL SELECT 'submissions', count(*) FROM submissions UNION ALL SELECT 'documents', count(*) FROM documents"
+# Send input to a goal's PO through the local Webhook
+say GOAL INPUT:
+    @. worker/.dev.vars && curl -sS -X POST "http://localhost:8787/goals/{{GOAL}}" -H "Authorization: Bearer $WEBHOOK_TOKEN" -H 'Content-Type: application/json' -d "$(jq -n --arg input {{quote(INPUT)}} '{requestId: (now | tostring), input: $input}')"; echo
 
-# Print the root conversation's entries as JSONL
-export:
-    @sqlite3 -readonly {{quote(db)}} "SELECT record FROM entries WHERE conversation_id = 1 ORDER BY id"
+# Show a goal's recent entries and pending submissions
+show GOAL:
+    @. worker/.dev.vars && curl -sS "http://localhost:8787/goals/{{GOAL}}" -H "Authorization: Bearer $WEBHOOK_TOKEN" | jq

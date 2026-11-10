@@ -1,5 +1,5 @@
 # Project Overview
-pi durable agent をホストで動かしてツールの実行だけを devcontainer に隔離し、コンテキストを SQLite（JSONL）で永続化、開発者は PO 役エージェントと対話し、内部のサブエージェント群が仕様・設計・実装を行う開発環境の検証・調査リポジトリ。
+pi durable agent を Cloudflare の Durable Object で動かしてツールの実行だけを Cloudflare Containers に隔離し、コンテキストを DO の SQLite で永続化、開発者は Slack で PO 役エージェントと対話し、内部のサブエージェント群が仕様・設計・実装を行う開発環境の検証・調査リポジトリ。
 
 # Implementation Principles
 

@@ -1,5 +1,5 @@
 ---
-status: 'accepted'
+status: 'superseded by [0002](0002-run-on-cloudflare.md)'
 date: 2026-11-03
 decision-makers: 'Hol1kgmg'
 ---

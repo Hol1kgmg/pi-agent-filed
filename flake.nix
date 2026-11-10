@@ -129,6 +129,7 @@
           packages = [
             pkgs.nodejs_22
             pkgs.sqlite
+            pkgs.cloudflared
             (pkgs.python3.withPackages (ps: [ ps.playwright ]))
           ];
           # stack-diagram の render_png.py 用。pip の playwright install の代わりに Nix のブラウザを使う
