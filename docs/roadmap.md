@@ -136,7 +136,8 @@ Cloudflare の Durable Object（DO）で [pi-durable](https://github.com/earendi
 - 再デプロイでは生成は止まらなかった。`sleep 300` の 18 秒後にデプロイしても、bash は 1 回で終わり、5 分後に返信が来た。そのツールの結果の checkpoint は、デプロイ前の版（`2cc0ac14`）のコンテナ DO で動いていた。実行中の DO は古い版のまま仕事を終えるので、alarm からの再開は通らない。再開そのものは M11 で、DO を止めて確かめた
 - デプロイ先の snapshot は 4481 バイトだった（`wrangler dev` では 976MB）。`durable_object` 方式ではイメージとの差分だけを持つとみられる
 - Slack は本文の `&`、`<`、`>` を `&amp;`、`&lt;`、`&gt;` にして送るので、入口で元に戻す。戻す前は、PO に `&amp;&amp;` のまま届いていた
-- 未確認: snapshot の保存と戻しにかかる時間と料金、snapshot の期限、GitHub App のトークンでの clone / push / PR の作成
+- GitHub App: Slack から、テスト用のリポジトリ（`Hol1kgmg/pi-agent-test`）の clone、push、`curl` での PR の作成（#11、作成者は `app/pi-durable-agent-workspace`）が通った。コンテナの `env` と `git config` には資格情報がなかった。トークンは Egress Worker が差し込む。`gh` は手元にトークンがないと動かないので、PR は API を直接呼ぶ。App の Callback URL と Webhook は使わない（空、Webhook は Active を外す）
+- 未確認: snapshot の保存と戻しにかかる時間と料金、snapshot の期限（30 日）
 
 ## 進め方
 
